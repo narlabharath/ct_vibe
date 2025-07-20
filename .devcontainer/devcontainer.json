@@ -1,0 +1,11 @@
+{
+    "name": "Python 3.9 Dev Container",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python3.9"
+    },
+    "postCreateCommand": "python3.9 -m venv .venv",
+    "remoteUser": "vscode"
+}
