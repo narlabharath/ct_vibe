@@ -1,5 +1,3 @@
-
-
 # CT Vibe Frontend
 
 This is the Dash-based frontend for CT Vibe, a session-driven chat and file management system. It provides a modern UI for managing user sessions, uploading and previewing files, and interacting with a FastAPI backend. The frontend is designed for extensibility and a clean user experience.
@@ -38,6 +36,12 @@ CT Vibe's frontend is a modern, extensible Dash app for session-based chat and f
 - **File Upload and Preview**:
   - Upload multiple files when creating a session.
   - Preview uploaded file names before submission.
+
+**Chat Display**:
+  - Renders chat responses as an ordered list of output events from the backend `/query` endpoint.
+  - Each event is either a text message or a plot image (base64 PNG).
+  - Only user/assistant messages and plot images are shown; debug prints/logs are excluded.
+
 - **Responsive UI**:
   - Uses Dash Bootstrap Components for a modern look.
   - Modals for session creation and renaming.
@@ -92,6 +96,7 @@ frontend/
 - `sidebar.py` manages all session/file UI and logic, and communicates with the backend via HTTP requests.
 - All session and file actions (create, rename, select, upload) are handled by Dash callbacks in `sidebar.py`.
 - The session list is refreshed automatically and after relevant actions.
+- The chat window displays responses as ordered events (text and plot) from the backend, matching the `/query` output format.
 
 ---
 
@@ -118,6 +123,7 @@ frontend/
 - `POST /upload` — Create a new session by uploading files
 - `GET /sessions` — List all sessions
 - `POST /sessions/{session_id}/rename` — Rename a session
+- `POST /query` — Send a chat message and receive an ordered list of output events (text/plot) for display
 
 ---
 

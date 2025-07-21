@@ -31,6 +31,9 @@ This backend implements a file-based session and chat management system for a ch
 
 ### Chat Interaction
 - **POST /query**: Accepts a question and session_id, stores both question and answer in a chat log (`chat.json`).
+  - Returns the answer as an ordered list of output events:
+    - Each event is either `{"type": "text", "content": ...}` or `{"type": "plot", "content": ...}` (base64 PNG image).
+    - Only user/assistant messages and plot images are included; internal debug prints/logs are not returned.
 - **GET /sessions/{session_id}/chat**: Returns the entire chat log (question-answer pairs) for the session.
 
 ---
@@ -84,9 +87,9 @@ backend/
      pip install fastapi uvicorn pydantic python-multipart
      ```
 3. **Run the FastAPI server:**
-   - From `backend/app/`:
+   - From the `backend/` directory:
      ```bash
-     uvicorn main:app --reload
+     uvicorn app.main:app --reload
      ```
    - The API will be available at `http://localhost:8000/`
 4. **Test endpoints:**
@@ -99,6 +102,7 @@ backend/
 - **File-Based Storage**: No database is used; all data is stored in the filesystem for transparency and easy debugging.
 - **Hardcoded User**: All endpoints currently operate for the user "testuser" for development simplicity.
 - **Modular Routes**: Endpoints are grouped by function (Session, Chat, Auth) for maintainability.
+- **Chat Output Events**: The `/query` endpoint now returns chat responses as an ordered list of text and plot events, suitable for frontend rendering. Debug prints and internal logs are excluded from the response.
 - **Extensibility**: The structure allows for easy addition of authentication, user scoping, or file pre-processing in the future.
 
 ---

@@ -1,0 +1,4 @@
+.session-row .rename-btn { display: none; }
+.session-row .delete-btn { display: none; }
+.session-row:hover .rename-btn { display: inline-block; }
+.session-row:hover .delete-btn { display: inline-block; }

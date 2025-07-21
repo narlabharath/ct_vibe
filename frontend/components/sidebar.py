@@ -22,6 +22,7 @@ def get_sidebar():
                 dcc.Store(id="active-session"),
                 dcc.Store(id="rename-session-id"),
                 dcc.Store(id="rename-input-store"),
+                dcc.Store(id="delete-session-id"),
             ])
         ], style={"height": "100%"}),
         dbc.Modal([
@@ -52,7 +53,18 @@ def get_sidebar():
                 dbc.Button("Rename", id="rename-confirm-btn", color="primary", className="me-2"),
                 dbc.Button("Cancel", id="rename-cancel-btn", color="secondary")
             ])
-        ], id="rename-modal", is_open=False)
+        ], id="rename-modal", is_open=False),
+        dbc.Modal([
+            dbc.ModalHeader("Delete Session"),
+            dbc.ModalBody([
+                html.Div("Are you sure you want to delete this session? This action cannot be undone.", id="delete-modal-body"),
+                html.Div(id="delete-error", style={"color": "red", "marginTop": "0.5em"})
+            ]),
+            dbc.ModalFooter([
+                dbc.Button("Delete", id="delete-confirm-btn", color="danger", className="me-2"),
+                dbc.Button("Cancel", id="delete-cancel-btn", color="secondary")
+            ])
+        ], id="delete-modal", is_open=False)
     ])
 # Modal open/close
 @callback(
@@ -178,11 +190,20 @@ def render_session_list(user_data, active_session, n_intervals):
                 "✏️",
                 id={"type": "rename-btn", "index": s["session_id"]},
                 n_clicks=0,
+                className="rename-btn",
                 style={"marginLeft": "0.5em", "border": "none", "background": "transparent", "cursor": "pointer"}
+            ),
+            html.Button(
+                "🗑️",
+                id={"type": "delete-btn", "index": s["session_id"]},
+                n_clicks=0,
+                className="delete-btn",
+                style={"marginLeft": "0.5em", "border": "none", "background": "transparent", "cursor": "pointer", "color": "#d9534f"}
             )
-        ], style={"display": "flex", "alignItems": "center", "justifyContent": "space-between", "width": "100%"})
+        ], className="session-row", style={"display": "flex", "alignItems": "center", "justifyContent": "space-between", "width": "100%"})
         for s in sessions
     ]
+
 
 # Open Rename Modal When ✏️ Clicked, clear input and set session id
 @callback(
@@ -213,6 +234,31 @@ def open_rename_modal(n_clicks_list, ids):
 def close_rename_modal(n):
     return False, "", None, ""
 
+# Open Delete Modal When 🗑️ Clicked, set session id
+@callback(
+    Output("delete-modal", "is_open"),
+    Output("delete-session-id", "data"),
+    Output("delete-error", "children"),
+    Input({"type": "delete-btn", "index": ALL}, "n_clicks"),
+    State({"type": "delete-btn", "index": ALL}, "id"),
+    prevent_initial_call=True
+)
+def open_delete_modal(n_clicks_list, ids):
+    for i, n in enumerate(n_clicks_list):
+        if n and ids[i] and "index" in ids[i]:
+            return True, ids[i]["index"], ""
+    return dash.no_update, dash.no_update, dash.no_update
+
+# Close Delete Modal on Cancel
+@callback(
+    Output("delete-modal", "is_open", allow_duplicate=True),
+    Output("delete-session-id", "data", allow_duplicate=True),
+    Output("delete-error", "children", allow_duplicate=True),
+    Input("delete-cancel-btn", "n_clicks"),
+    prevent_initial_call=True
+)
+def close_delete_modal(n):
+    return False, None, ""
 
 # Handle Rename Logic via Backend, force refresh, close modal, clear input and session id
 @callback(

@@ -1,5 +1,3 @@
-
-
 """
 File-Based Chat System API Routes
 =================================
@@ -259,13 +257,55 @@ async def upload_files(files: List[UploadFile] = File(...)):
 def query_session(request: QueryRequest):
     """
     Accepts a session_id and question, returns a mocked answer, and appends the Q&A to chat.json in the session folder.
+    Now returns output as an ordered list of text and plot events.
     """
-    import json
+    import json, io, contextlib, base64, glob, os, sys
+    import matplotlib.pyplot as plt
+    import pandas as pd
     user_id = "testuser"
     BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
     session_dir = os.path.join(BASE_DIR, "backend", "sessions", user_id, request.session_id)
     chat_path = os.path.join(session_dir, "chat.json")
-    answer = f"This is a mocked answer to: {request.question}"
+    # Prepare ordered output list
+    output_events = []
+    # Patch plt.show to capture plots as events
+    original_show = plt.show
+    def capture_show(*args, **kwargs):
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png')
+        buf.seek(0)
+        encoded_img = base64.b64encode(buf.read()).decode('utf-8')
+        output_events.append({"type": "plot", "content": f"data:image/png;base64,{encoded_img}"})
+        plt.close()
+    plt.show = capture_show
+    # Patch sys.stdout.write to capture text as events
+    original_write = sys.stdout.write
+    def capture_write(text):
+        if text.strip():
+            output_events.append({"type": "text", "content": text})
+        return original_write(text)
+    sys.stdout.write = capture_write
+    try:
+        # Scenario: text1, plot1, text2
+        print("Note: File reading is temporarily disabled. Showing mock output only.\n")
+        print(f"This is a placeholder response for: {request.question}\n")
+        print("Now generating a plot...\n")
+        plt.figure()
+        import numpy as np
+        x = np.linspace(0, 10, 100)
+        y = np.sin(x)
+        plt.plot(x, y)
+        plt.title("Placeholder sine wave plot")
+        plt.show()
+        print("Plot generated above.\n")
+        print("End of response.\n")
+    finally:
+        plt.show = original_show  # Restore
+        sys.stdout.write = original_write
+    answer = {
+        "events": output_events
+    }
+    # Load chat log
     chat_log = []
     if os.path.exists(chat_path):
         try:
@@ -273,7 +313,12 @@ def query_session(request: QueryRequest):
                 chat_log = json.load(f)
         except Exception:
             chat_log = []
-    chat_log.append({"question": request.question, "answer": answer})
+    from datetime import datetime
+    chat_log.append({
+        "question": request.question,
+        "answer": answer,
+        "timestamp": datetime.now().isoformat()
+    })
     with open(chat_path, "w") as f:
         json.dump(chat_log, f, indent=2)
     return {"answer": answer}
@@ -309,6 +354,32 @@ def get_chat_log(session_id: str):
         return result
     except Exception:
         return []
+# =========================
+# Delete Session Endpoint
+# =========================
+from fastapi import status
+
+@router.delete(
+    "/sessions/{session_id}",
+    tags=["Session"],
+    summary="Delete a session and its files",
+    response_description="Session deleted successfully."
+)
+def delete_session(session_id: str):
+    """
+    Delete the session folder and all its contents for the hardcoded user 'testuser'.
+    """
+    import shutil
+    user_id = "testuser"
+    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    session_dir = os.path.join(BASE_DIR, "backend", "sessions", user_id, session_id)
+    if not os.path.exists(session_dir):
+        raise HTTPException(status_code=404, detail=f"Session not found: {session_id}")
+    try:
+        shutil.rmtree(session_dir)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete session: {e}")
+    return {"message": "Session deleted successfully", "session_id": session_id}
 
 
 # =========================
